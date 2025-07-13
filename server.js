@@ -1,49 +1,44 @@
 const express = require('express');
 const axios = require('axios');
-const bodyParser = require('body-parser');
-require('dotenv').config(); // optional but harmless if present
 
 const app = express();
-const port = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.post('/translate', async (req, res) => {
-  const { text, target } = req.body;
+  const { text, to } = req.body;
 
-  const apiKey = process.env.GOOGLE_TRANSLATE_KEY;
-
-  if (!apiKey) {
+  if (!GOOGLE_TRANSLATE_API_KEY) {
     return res.status(500).json({ error: 'Missing Google Translate API key' });
   }
 
-  if (!text || !target) {
-    return res.status(400).json({ error: 'Missing required fields: text or target' });
+  if (!text || !to) {
+    return res.status(400).json({ error: 'Missing text or target language' });
   }
 
   try {
-    const response = await axios.post(
-      'https://translation.googleapis.com/language/translate/v2',
-      {
+    const response = await axios.post(`https://translation.googleapis.com/language/translate/v2`, null, {
+      params: {
         q: text,
-        target: target,
-        format: 'text',
+        target: to,
+        key: GOOGLE_TRANSLATE_API_KEY,
       },
-      {
-        params: {
-          key: apiKey,
-        },
-      }
-    );
+    });
 
     const translatedText = response.data.data.translations[0].translatedText;
     res.json({ translatedText });
   } catch (err) {
-    console.error('Translation failed:', err.response?.data || err.message);
+    console.error('Translation error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Translation failed' });
   }
 });
 
-app.listen(port, () => {
-  console.log(`✅ Translate Proxy running on port ${port}`);
+app.get('/', (req, res) => {
+  res.send('Translate Proxy is running.');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
